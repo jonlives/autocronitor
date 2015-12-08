@@ -1,0 +1,124 @@
+#! /usr/bin/env ruby
+require 'unirest'
+require 'choice'
+require 'autocronitor/helper'
+
+Unirest.default_header 'Accept', 'application/json'
+Unirest.default_header 'Content-Type', 'application/json'
+
+
+Choice.options do
+  header ''
+  header 'Specific options:'
+
+  option :api_key, :required => true do
+    short '-a'
+    long '--api-key APIKEY'
+    desc 'Your cronitor.io API key'
+  end
+
+  option :file_name, :required => true do
+    short '-f'
+    long '--filename FILENAME'
+    desc 'The cron files to read'
+  end
+
+  separator ''
+  separator 'Email Options: '
+
+  option :template_name, :required => true do
+    short '-t'
+    long '--templace *TEMPLATES'
+    desc 'The Cronitor.io templates to send alerts for this monitor to'
+  end
+
+  separator ''
+  separator 'Text to exclude: '
+
+  option :common_text do
+    short '-c'
+    long '--common-text *COMMONTEXT'
+    desc 'A space separated list of common text to exclude from cron names'
+  end
+
+  option :common_include_text do
+    short '-i'
+    long '--common-include-text *COMMONINCLUDETEXT'
+    desc 'A space separated list of common text to exclude from cron names (includes strings which contain each phrase)'
+  end
+end
+
+
+file_name = Choice[:file_name]
+api_key = Choice[:api_key]
+template_names = Choice[:template_name]
+
+# Filter common text out of cron_line so we don't produce an unreadable name
+common_text = Choice[:common_text]|| %w(SYMFONY_ENV=prod php 2>&1 && >> touch)
+common_text_include = Choice[:common_include_text]|| %w(/var/log /tmp)
+
+helper = Autocronitor::Helper.new(api_key)
+
+# This array will contain lines to be written back to the file
+new_file_lines = []
+
+# Check if the file name exists, and exit if not
+if !File.exists?(file_name)
+  puts "ERROR: File #{file_name} does not exist. Exiting."
+  exit 1
+else
+  puts "Processing file #{file_name}"
+  puts ""
+
+  # Read all lines from file
+  File.readlines(file_name).each do |line|
+
+    # Skip the current line if it's a comment
+    if line.include?("#") or line == "\n"
+      new_file_lines << line
+      next
+    end
+
+    # Split line by whitespace
+    split_line = line.split(/\s+/m)
+
+    # If we have an @ cron expression - eg @hourly, cronitor doesn't support those, so skip this line
+    if split_line.first.include?("@")
+      puts "Non standard '@' format cron expression detected, cannot create cronitor job. Skpping..."
+      next
+      # Otherwise, we have a standard cron expression, so extract it and the remainder of the line
+    else
+      cron_expression = split_line[0..4].join(" ")
+      remaining_line = split_line[5..-1]
+    end
+
+    # Filter out line segments which include text from the above arrays, then re-join the string
+    filtered_line = remaining_line.select{|segment| !common_text.include?(segment) and !common_text_include.any?{ |word| segment.include?(word) }}.map{|segment|segment.include?("/") ? segment.split("/").last : segment}.join(" ")
+
+    puts "Cron expression: #{cron_expression}"
+    puts "Cron name: #{filtered_line}"
+
+    # Talk to cronitor's suggest API to get auto-generated rules for our cron expression
+    rules = helper.monitor_suggest(cron_expression)
+    puts "Suggested rules:"
+    puts rules.inspect
+
+    # Create a new monitor via cronitor's API with the name and rules we've created
+    puts "Creating monitor #{filtered_line}..."
+    monitor_id = helper.monitor_create(filtered_line,rules,template_names)
+    monitor_url = "#{@monitor_url}/#{monitor_id}"
+
+    # Construct the replacement line to be written back to the file
+    cronitored_line = "#{cron_expression} curl #{monitor_url + '/run'} -m 10 && #{remaining_line.join(" ")} && curl #{monitor_url + '/complete'} -m 10"
+    new_file_lines << cronitored_line
+    puts ""
+  end
+
+  puts "Writing new #{file_name} with added Cronitor URLs..."
+  open(file_name, 'w') { |f|
+    new_file_lines.each do |line|
+      f.puts line
+    end
+  }
+
+end
