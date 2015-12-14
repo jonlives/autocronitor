@@ -1,5 +1,7 @@
 # autocronitor
 
+[![Gem Version](https://badge.fury.io/rb/autocronitor.png)](http://badge.fury.io/rb/autocronitor)
+
 A CLI tool to parse a standard format crontab file, create monitors in cronitor.io for each job, and automatically add the necessary curl commands to the original crontab.
 
 It assumes that you are using cronitor's "template" feature to configure notifications for your monitors, and that you have created templates which will then be passed to autocronitor.
