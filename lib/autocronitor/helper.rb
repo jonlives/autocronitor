@@ -9,12 +9,7 @@ module Autocronitor
       @monitor_template = {
           name: '',
           notifications: {
-          emails: [],
-          slack: [],
-          pagerduty: [],
-          phones: [],
-          webhooks: [],
-          templates: [],
+            templates: [],
       },
           rules: [
       ],
