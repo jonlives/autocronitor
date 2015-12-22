@@ -106,10 +106,9 @@ else
     # Create a new monitor via cronitor's API with the name and rules we've created
     puts "Creating monitor #{filtered_line}..."
     monitor_id = helper.monitor_create(filtered_line,rules,template_names)
-    monitor_url = "#{@monitor_url}/#{monitor_id}"
 
     # Construct the replacement line to be written back to the file
-    cronitored_line = "#{cron_expression} curl #{monitor_url + '/run'} -m 10 && #{remaining_line.join(" ")} && curl #{monitor_url + '/complete'} -m 10"
+    cronitored_line = "#{cron_expression} curl #{monitor_id + '/run'} -m 10 && #{remaining_line.join(" ")} && curl #{monitor_id + '/complete'} -m 10"
     new_file_lines << cronitored_line
     puts ""
   end
