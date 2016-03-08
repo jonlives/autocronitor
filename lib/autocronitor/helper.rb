@@ -1,7 +1,5 @@
 require 'unirest'
 
-require 'ipecache/plugins'
-
 module Autocronitor
   class Helper
 
