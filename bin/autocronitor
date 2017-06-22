@@ -26,7 +26,7 @@ Choice.options do
   separator ''
   separator 'Email Options: '
 
-  option :template_name, :required => true do
+  option :template_name do
     short '-t'
     long '--templace *TEMPLATES'
     desc 'The Cronitor.io templates to send alerts for this monitor to'
@@ -73,8 +73,8 @@ else
   # Read all lines from file
   File.readlines(file_name).each do |line|
 
-    # Skip the current line if it's a comment
-    if line.include?("#") or line == "\n"
+    # Skip the current line if it's a comment, empty, or MAILTO
+    if line.include?("#") or line.start_with?("MAILTO") or line == "\n"
       new_file_lines << line
       next
     end
@@ -97,18 +97,12 @@ else
 
     puts "Cron expression: #{cron_expression}"
     puts "Cron name: #{filtered_line}"
-
-    # Talk to cronitor's suggest API to get auto-generated rules for our cron expression
-    rules = helper.monitor_suggest(cron_expression)
-    puts "Suggested rules:"
-    puts rules.inspect
-
-    # Create a new monitor via cronitor's API with the name and rules we've created
     puts "Creating monitor #{filtered_line}..."
-    monitor_id = helper.monitor_create(filtered_line,rules,template_names)
+
+    monitor_id = helper.monitor_create(filtered_line, cron_expression, template_names)
 
     # Construct the replacement line to be written back to the file
-    cronitored_line = "#{cron_expression} curl #{monitor_id + '/run'} -m 10 && #{remaining_line.join(" ")} && curl #{monitor_id + '/complete'} -m 10"
+    cronitored_line = "#{cron_expression} curl #{monitor_id + '/run'} -m 10 ; #{remaining_line.join(" ")} && curl #{monitor_id + '/complete'} -m 10"
     new_file_lines << cronitored_line
     puts ""
   end
