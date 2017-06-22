@@ -38,9 +38,9 @@ Text to exclude:
 * Mandatory Parameters (you must specify one or the other)
   * -a, --api-key APIKEY             Your cronitor.io API key
   * -f, --filename FILENAME          The crontab files to read
-  * -t, --templace *TEMPLATES        The Cronitor.io template(s) to use for notifications
 
 * Optional Parameters
+  * -t, --templace *TEMPLATES        The Cronitor.io template(s) to use for notifications. If not provided Cronitor will default to using the email address of your account to send notifications.
   * -c,  --common-text *COMMONTEXT   A space separated list of common text to exclude from cron names
   * -i, --common-include-text *COMMONINCLUDETEXT    A space separated list of common text to exclude from cron names (includes strings which contain each phrase)
 
@@ -54,8 +54,6 @@ Processing file test.conf
 
 Cron expression: 10 * * * *
 Cron name: testcron
-Suggested rules:
-[{"rule_type"=>"ran_longer_than", "duration"=>1, "human_readable"=>"Ran for longer than 1 hour", "time_unit"=>"hours", "hours_to_followup_alert"=>24}, {"rule_type"=>"not_completed_in", "duration"=>61, "human_readable"=>"Has not received a complete ping in over 61 minutes", "time_unit"=>"minutes", "hours_to_followup_alert"=>24}]
 Creating monitor testcron...
 Monitor 'testcron' created with ID abc123
 
